@@ -30,6 +30,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
+# https://github.com/home-assistant/core/blob/dev/homeassistant/util/color.py
 from homeassistant.util.color import (
     color_RGB_to_xy,
     color_temperature_kelvin_to_mired,
@@ -50,6 +51,8 @@ CONF_LIGHTS_BRIGHT = "lights_brightness"
 CONF_DISABLE_BRIGHTNESS_ADJUST = "disable_brightness_adjust"
 CONF_MIN_BRIGHT, DEFAULT_MIN_BRIGHT = "min_brightness", 1
 CONF_MAX_BRIGHT, DEFAULT_MAX_BRIGHT = "max_brightness", 100
+CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", 2500
+CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", 5500
 CONF_SLEEP_ENTITY = "sleep_entity"
 CONF_SLEEP_STATE = "sleep_state"
 CONF_SLEEP_CT, DEFAULT_SLEEP_CT = "sleep_colortemp", 1000
@@ -73,6 +76,12 @@ PLATFORM_SCHEMA = vol.Schema(
         ),
         vol.Optional(CONF_MAX_BRIGHT, default=DEFAULT_MAX_BRIGHT): vol.All(
             vol.Coerce(int), vol.Range(min=1, max=100)
+        ),
+        vol.Optional(CONF_MIN_CT, default=DEFAULT_MIN_CT): vol.All(
+            vol.Coerce(int), vol.Range(min=1000, max=10000)
+        ),
+        vol.Optional(CONF_MAX_CT, default=DEFAULT_MAX_CT): vol.All(
+            vol.Coerce(int), vol.Range(min=1000, max=10000)
         ),
         vol.Optional(CONF_SLEEP_ENTITY): cv.entity_id,
         vol.Optional(CONF_SLEEP_STATE): vol.All(cv.ensure_list, [cv.string]),
@@ -285,13 +294,25 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
         )
 
     def _color_temperature(self):
+        # if self._is_sleep():
+        #     return self._sleep_colortemp
+        
+
+        # if self._circadian_lighting._percent > 0:
+        #     delta = self._max_colortemp - self._min_colortemp
+        #     percent = self._circadian_lighting._percent / 100
+        #     return (delta * percent) + self._min_colortemp
+        # else:
+        #     return self._min_colortemp
+        
+        # return self._circadian_lighting._colortemp
         return (
             self._circadian_lighting._colortemp
             if not self._is_sleep()
             else self._sleep_colortemp
         )
 
-    def _calc_ct(self):
+    def _calc_ct(self) -> int:
         return color_temperature_kelvin_to_mired(self._color_temperature())
 
     def _calc_rgb(self):
@@ -369,10 +390,8 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
                 service_data,
             )
             tasks.append(
-                self.hass.async_create_task(
-                    self.hass.services.async_call(
-                        LIGHT_DOMAIN, SERVICE_TURN_ON, service_data
-                    )
+                self.hass.services.async_call(
+                    LIGHT_DOMAIN, SERVICE_TURN_ON, service_data
                 )
             )
         if tasks:

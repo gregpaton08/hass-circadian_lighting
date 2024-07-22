@@ -45,6 +45,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers.discovery import async_load_platform
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+# https://github.com/home-assistant/core/blob/dev/homeassistant/helpers/event.py
 from homeassistant.helpers.event import (
     async_track_sunrise,
     async_track_sunset,
