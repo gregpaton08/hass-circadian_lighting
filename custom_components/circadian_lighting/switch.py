@@ -52,8 +52,8 @@ CONF_LIGHTS_BRIGHT = "lights_brightness"
 CONF_DISABLE_BRIGHTNESS_ADJUST = "disable_brightness_adjust"
 CONF_MIN_BRIGHT, DEFAULT_MIN_BRIGHT = "min_brightness", 1
 CONF_MAX_BRIGHT, DEFAULT_MAX_BRIGHT = "max_brightness", 100
-CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", None # 2500
-CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", None # 5500
+CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", -1 # 2500
+CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", -1 # 5500
 CONF_SLEEP_ENTITY = "sleep_entity"
 CONF_SLEEP_STATE = "sleep_state"
 CONF_SLEEP_CT, DEFAULT_SLEEP_CT = "sleep_colortemp", 1000
@@ -310,13 +310,13 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
 
         min_colortemp = (
             self._min_colortemp
-            if self._min_colortemp is not None
+            if self._min_colortemp > 0
             else self._circadian_lighting._min_colortemp
         )
         if self._circadian_lighting._percent > 0:
             max_colortemp = (
                 self._max_colortemp
-                if self._max_colortemp is not None
+                if self._max_colortemp > 0
                 else self._circadian_lighting._max_colortemp
             )
             delta = max_colortemp - min_colortemp
