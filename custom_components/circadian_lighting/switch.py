@@ -5,6 +5,7 @@ Circadian Lighting Switch for Home-Assistant.
 import asyncio
 import logging
 from itertools import repeat
+from typing import Any
 
 import voluptuous as vol
 
@@ -52,8 +53,8 @@ CONF_LIGHTS_BRIGHT = "lights_brightness"
 CONF_DISABLE_BRIGHTNESS_ADJUST = "disable_brightness_adjust"
 CONF_MIN_BRIGHT, DEFAULT_MIN_BRIGHT = "min_brightness", 1
 CONF_MAX_BRIGHT, DEFAULT_MAX_BRIGHT = "max_brightness", 100
-CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", -1 # 2500
-CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", -1 # 5500
+CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", 999 # 2500
+CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", 999 # 5500
 CONF_SLEEP_ENTITY = "sleep_entity"
 CONF_SLEEP_STATE = "sleep_state"
 CONF_SLEEP_CT, DEFAULT_SLEEP_CT = "sleep_colortemp", 1000
@@ -79,10 +80,10 @@ PLATFORM_SCHEMA = vol.Schema(
             vol.Coerce(int), vol.Range(min=1, max=100)
         ),
         vol.Optional(CONF_MIN_CT, default=DEFAULT_MIN_CT): vol.All(
-            vol.Coerce(int), vol.Range(min=1000, max=10000)
+            vol.Coerce(int), vol.Range(min=999, max=10000)
         ),
         vol.Optional(CONF_MAX_CT, default=DEFAULT_MAX_CT): vol.All(
-            vol.Coerce(int), vol.Range(min=1000, max=10000)
+            vol.Coerce(int), vol.Range(min=999, max=10000)
         ),
         vol.Optional(CONF_SLEEP_ENTITY): cv.entity_id,
         vol.Optional(CONF_SLEEP_STATE): vol.All(cv.ensure_list, [cv.string]),
@@ -102,7 +103,7 @@ PLATFORM_SCHEMA = vol.Schema(
 )
 
 
-def setup_platform(hass, config, add_devices, discovery_info=None):
+def setup_platform(hass, config: dict[str, Any], add_devices, discovery_info=None):
     """Set up the Circadian Lighting switches."""
     circadian_lighting = hass.data.get(DOMAIN)
     if circadian_lighting is not None:
@@ -310,13 +311,13 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
 
         min_colortemp = (
             self._min_colortemp
-            if self._min_colortemp > 0
+            if self._min_colortemp > 999
             else self._circadian_lighting._min_colortemp
         )
         if self._circadian_lighting._percent > 0:
             max_colortemp = (
                 self._max_colortemp
-                if self._max_colortemp > 0
+                if self._max_colortemp > 999
                 else self._circadian_lighting._max_colortemp
             )
             delta = max_colortemp - min_colortemp
