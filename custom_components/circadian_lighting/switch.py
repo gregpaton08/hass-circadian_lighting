@@ -30,6 +30,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.util import slugify
+
 # https://github.com/home-assistant/core/blob/dev/homeassistant/util/color.py
 from homeassistant.util.color import (
     color_RGB_to_xy,
@@ -51,8 +52,8 @@ CONF_LIGHTS_BRIGHT = "lights_brightness"
 CONF_DISABLE_BRIGHTNESS_ADJUST = "disable_brightness_adjust"
 CONF_MIN_BRIGHT, DEFAULT_MIN_BRIGHT = "min_brightness", 1
 CONF_MAX_BRIGHT, DEFAULT_MAX_BRIGHT = "max_brightness", 100
-CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", 2500
-CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", 5500
+CONF_MIN_CT, DEFAULT_MIN_CT = "min_colortemp", None # 2500
+CONF_MAX_CT, DEFAULT_MAX_CT = "max_colortemp", None # 5500
 CONF_SLEEP_ENTITY = "sleep_entity"
 CONF_SLEEP_STATE = "sleep_state"
 CONF_SLEEP_CT, DEFAULT_SLEEP_CT = "sleep_colortemp", 1000
@@ -116,6 +117,8 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
             disable_brightness_adjust=config.get(CONF_DISABLE_BRIGHTNESS_ADJUST),
             min_brightness=config.get(CONF_MIN_BRIGHT),
             max_brightness=config.get(CONF_MAX_BRIGHT),
+            min_colortemp=config.get(CONF_MIN_CT),
+            max_colortemp=config.get(CONF_MAX_CT),
             sleep_entity=config.get(CONF_SLEEP_ENTITY),
             sleep_state=config.get(CONF_SLEEP_STATE),
             sleep_colortemp=config.get(CONF_SLEEP_CT),
@@ -180,6 +183,8 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
         disable_brightness_adjust,
         min_brightness,
         max_brightness,
+        min_colortemp,
+        max_colortemp,
         sleep_entity,
         sleep_state,
         sleep_colortemp,
@@ -201,6 +206,8 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
         self._disable_brightness_adjust = disable_brightness_adjust
         self._min_brightness = min_brightness
         self._max_brightness = max_brightness
+        self._min_colortemp = min_colortemp
+        self._max_colortemp = max_colortemp
         self._sleep_entity = sleep_entity
         self._sleep_state = sleep_state
         self._sleep_colortemp = sleep_colortemp
@@ -274,7 +281,11 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
     @property
     def extra_state_attributes(self):
         """Return the attributes of the switch."""
-        return {"hs_color": self._hs_color, "brightness": self._brightness, "colortemp": self._color_temperature()}
+        return {
+            "hs_color": self._hs_color,
+            "brightness": self._brightness,
+            "colortemp": self._color_temperature(),
+        }
 
     async def async_turn_on(self, **kwargs):
         """Turn on circadian lighting."""
@@ -294,23 +305,32 @@ class CircadianSwitch(SwitchEntity, RestoreEntity):
         )
 
     def _color_temperature(self):
-        # if self._is_sleep():
-        #     return self._sleep_colortemp
-        
+        if self._is_sleep():
+            return self._sleep_colortemp
 
-        # if self._circadian_lighting._percent > 0:
-        #     delta = self._max_colortemp - self._min_colortemp
-        #     percent = self._circadian_lighting._percent / 100
-        #     return (delta * percent) + self._min_colortemp
-        # else:
-        #     return self._min_colortemp
-        
-        # return self._circadian_lighting._colortemp
-        return (
-            self._circadian_lighting._colortemp
-            if not self._is_sleep()
-            else self._sleep_colortemp
+        min_colortemp = (
+            self._min_colortemp
+            if self._min_colortemp is not None
+            else self._circadian_lighting._min_colortemp
         )
+        if self._circadian_lighting._percent > 0:
+            max_colortemp = (
+                self._max_colortemp
+                if self._max_colortemp is not None
+                else self._circadian_lighting._max_colortemp
+            )
+            delta = max_colortemp - min_colortemp
+            percent = self._circadian_lighting._percent / 100
+            return (delta * percent) + min_colortemp
+        else:
+            return min_colortemp
+
+        # return self._circadian_lighting._colortemp
+        # return (
+        #     self._circadian_lighting._colortemp
+        #     if not self._is_sleep()
+        #     else self._sleep_colortemp
+        # )
 
     def _calc_ct(self) -> int:
         return color_temperature_kelvin_to_mired(self._color_temperature())
